@@ -26,6 +26,16 @@
 static const char *TAG = "HK";
 static mpu6050_handle_t mpu6050 = NULL;
 
+typedef struct {
+    mcpwm_timer_handle_t timer;
+    mcpwm_oper_handle_t oper;
+    mcpwm_cmpr_handle_t comparator;
+    mcpwm_gen_handle_t generator;
+} mcpwm_instance_t;
+
+mcpwm_instance_t servo1 = {NULL, NULL, NULL, NULL};
+
+
 /**
  * @brief i2c master initialization
  */
@@ -119,7 +129,7 @@ void app_main(void)
         now_pitch = angle.pitch;
 
         if ((now_pitch-before_pitch>=50) && (before_pitch != 0)){
-                servo_spawn(39);
+                servo_spawn(&servo1, 39);
         }
     }
     

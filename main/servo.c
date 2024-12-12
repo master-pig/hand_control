@@ -9,7 +9,6 @@
 #include "esp_log.h"
 #include "driver/mcpwm_prelude.h"
 
-#include "servo.h"
 
 static const char *TAG = "SERVO";
 
@@ -26,15 +25,24 @@ static const char *TAG = "SERVO";
 #define SERVO_TIMEBASE_PERIOD        20000    // 20000 ticks, 20ms   基准信号周期
 
 
-//角度转成脉冲输出时间长度
+typedef struct {
+    mcpwm_timer_handle_t timer;
+    mcpwm_oper_handle_t oper;
+    mcpwm_cmpr_handle_t comparator;
+    mcpwm_gen_handle_t generator;
+    } mcpwm_instance_t;
+
+mcpwm_instance_t servo1;
+mcpwm_instance_t servo2;
+
+// 角度转成脉冲输出时间长度
 static inline uint32_t example_angle_to_compare(int angle)
 {
     return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
 }
 
-void servo_spawn(int gpio){
+void servo_spawn(mcpwm_instance_t *instance, int gpio){
     ESP_LOGI(TAG, "Create timer and operator");//创建定时器和执行器
-    mcpwm_timer_handle_t timer = NULL;
     mcpwm_timer_config_t timer_config = {
         .group_id = 0,
         .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
@@ -42,68 +50,86 @@ void servo_spawn(int gpio){
         .period_ticks = SERVO_TIMEBASE_PERIOD,
         .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
     };
-    ESP_ERROR_CHECK(mcpwm_new_timer(&timer_config, &timer));
+    ESP_ERROR_CHECK(mcpwm_new_timer(&timer_config, &(instance->timer)));
 
-    mcpwm_oper_handle_t oper = NULL;
     mcpwm_operator_config_t operator_config = {
         .group_id = 0, // operator must be in the same group to the timer  执行器必须和定时器同一个组
     };
-    ESP_ERROR_CHECK(mcpwm_new_operator(&operator_config, &oper));
+    ESP_ERROR_CHECK(mcpwm_new_operator(&operator_config, &(instance->oper)));
 
     ESP_LOGI(TAG, "Connect timer and operator");//连接定时器和执行器
-    ESP_ERROR_CHECK(mcpwm_operator_connect_timer(oper, timer));
+    ESP_ERROR_CHECK(mcpwm_operator_connect_timer(instance->oper, instance->timer));
 
     ESP_LOGI(TAG, "Create comparator and generator from the operator");//从执行器创建比较器和生成器
-    mcpwm_cmpr_handle_t comparator = NULL;
     mcpwm_comparator_config_t comparator_config = {
         .flags.update_cmp_on_tez = true,
     };
-    ESP_ERROR_CHECK(mcpwm_new_comparator(oper, &comparator_config, &comparator));
+    ESP_ERROR_CHECK(mcpwm_new_comparator(instance->oper, &comparator_config, &(instance->comparator)));
 
-    mcpwm_gen_handle_t generator = NULL;
     mcpwm_generator_config_t generator_config = {
         .gen_gpio_num = gpio,
     };
-    ESP_ERROR_CHECK(mcpwm_new_generator(oper, &generator_config, &generator));
+    ESP_ERROR_CHECK(mcpwm_new_generator(instance->oper, &generator_config, &(instance->generator)));
 
     // set the initial compare value, so that the servo will spin to the center position
     //设置初始比较值，使伺服系统旋转到中心位置
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(0)));
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(0)));
 
     ESP_LOGI(TAG, "Set generator action on timer and compare event");//在计时器上设置生成器动作并比较事件
     // go high on counter empty
-    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(generator,
+    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_timer_event(instance->generator,
                                                               MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)));
     // go low on compare threshold
-    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(generator,
-                                                                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, comparator, MCPWM_GEN_ACTION_LOW)));
+    ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(instance->generator,
+                                                                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, instance->comparator, MCPWM_GEN_ACTION_LOW)));
 
     ESP_LOGI(TAG, "Enable and start timer");//使能并开始定时器
-    ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
-    ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
+    ESP_ERROR_CHECK(mcpwm_timer_enable(instance->timer));
+    ESP_ERROR_CHECK(mcpwm_timer_start_stop(instance->timer, MCPWM_TIMER_START_NO_STOP));
 
-    int angle = 0;
-    int step = 2;
-
-
+}
+void servo_move(mcpwm_instance_t *instance){
     vTaskDelay(pdMS_TO_TICKS(3000));
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(180)));
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(180)));
     vTaskDelay(pdMS_TO_TICKS(3000));
-
-    /*while (1) {
-        ESP_LOGI(TAG, "Angle of rotation: %d", angle);
-        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(angle)));
-        //Add delay, since it takes time for servo to rotate, usually 200ms/60degree rotation under 5V power supply
-        //增加延迟，因为伺服旋转需要时间，通常在5V电源下旋转200ms/60度
-        vTaskDelay(pdMS_TO_TICKS(100));
-        if ((angle + step) > 170 || (angle + step) < -170) {
-            step *= -1;
-            vTaskDelay(pdMS_TO_TICKS(3000));
-            ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(0)));
-
-
-        }
-        angle += step;
-    }*/
 }
 
+
+void Task2(void* param) //传入空指针方便后期传入参数:
+{
+    while(1)
+    {
+        ESP_LOGI(TAG,"执行任务2");
+        servo_move(&servo2);
+        //printf("Hello Task!\n");//打印Hello Task!
+        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+    }
+
+}
+void Task1(void* param) //传入空指针方便后期传入参数:
+{
+    while(1)
+    {
+        ESP_LOGI(TAG,"执行任务1");
+        servo_move(&servo1);
+        //printf("Hello Task!\n");//打印Hello Task!
+        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+    }
+
+}
+
+void app_main(void){
+
+    
+
+    servo_spawn(&servo1, 39);
+    servo_spawn(&servo2, 40);
+    
+
+
+    ESP_LOGI(TAG,"FREERTOS 已启动！");
+    xTaskCreate(Task1,"Task1",2048,NULL,1,NULL);//创建任务1
+    vTaskDelay(800/portTICK_PERIOD_MS);
+    xTaskCreate(Task2,"Task2",2048,NULL,1,NULL);//创建任务2
+    
+}

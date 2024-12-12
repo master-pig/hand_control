@@ -1,5 +1,4 @@
-idf_component_register(SRCS  "MU6050_main.c" 
+idf_component_register(SRCS  "servo.c" 
                     INCLUDE_DIRS ""
-                    REQUIRES "servo" "unity" "driver")
-
+                    REQUIRES "driver" "freertos")
 
