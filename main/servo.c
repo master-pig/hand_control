@@ -34,6 +34,9 @@ typedef struct {
 
 mcpwm_instance_t servo1;
 mcpwm_instance_t servo2;
+mcpwm_instance_t servo3;
+mcpwm_instance_t servo4;
+mcpwm_instance_t servo5;
 
 // 角度转成脉冲输出时间长度
 static inline uint32_t example_angle_to_compare(int angle)
@@ -41,10 +44,10 @@ static inline uint32_t example_angle_to_compare(int angle)
     return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
 }
 
-void servo_spawn(mcpwm_instance_t *instance, int gpio){
+void servo_spawn(mcpwm_instance_t *instance, int gpio, int group){
     ESP_LOGI(TAG, "Create timer and operator");//创建定时器和执行器
     mcpwm_timer_config_t timer_config = {
-        .group_id = 0,
+        .group_id = group,
         .clk_src = MCPWM_TIMER_CLK_SRC_DEFAULT,
         .resolution_hz = SERVO_TIMEBASE_RESOLUTION_HZ,
         .period_ticks = SERVO_TIMEBASE_PERIOD,
@@ -53,7 +56,7 @@ void servo_spawn(mcpwm_instance_t *instance, int gpio){
     ESP_ERROR_CHECK(mcpwm_new_timer(&timer_config, &(instance->timer)));
 
     mcpwm_operator_config_t operator_config = {
-        .group_id = 0, // operator must be in the same group to the timer  执行器必须和定时器同一个组
+        .group_id = group, // operator must be in the same group to the timer  执行器必须和定时器同一个组
     };
     ESP_ERROR_CHECK(mcpwm_new_operator(&operator_config, &(instance->oper)));
 
@@ -92,20 +95,10 @@ void servo_move(mcpwm_instance_t *instance){
     vTaskDelay(pdMS_TO_TICKS(3000));
     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(180)));
     vTaskDelay(pdMS_TO_TICKS(3000));
-}
-
-
-void Task2(void* param) //传入空指针方便后期传入参数:
-{
-    while(1)
-    {
-        ESP_LOGI(TAG,"执行任务2");
-        servo_move(&servo2);
-        //printf("Hello Task!\n");//打印Hello Task!
-        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
-    }
+    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(0)));
 
 }
+
 void Task1(void* param) //传入空指针方便后期传入参数:
 {
     while(1)
@@ -118,18 +111,71 @@ void Task1(void* param) //传入空指针方便后期传入参数:
 
 }
 
+void Task2(void* param) //传入空指针方便后期传入参数:
+{
+    while(1)
+    {
+        ESP_LOGI(TAG,"执行任务2");
+        servo_move(&servo2);
+        //printf("Hello Task!\n");//打印Hello Task!
+        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+    }
+
+}
+
+void Task3(void* param) //传入空指针方便后期传入参数:
+{
+    while(1)
+    {
+        ESP_LOGI(TAG,"执行任务3");
+        servo_move(&servo3);
+        //printf("Hello Task!\n");//打印Hello Task!
+        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+    }
+
+}
+void Task4(void* param) //传入空指针方便后期传入参数:
+{
+    while(1)
+    {
+        ESP_LOGI(TAG,"执行任务4");
+        servo_move(&servo4);
+        //printf("Hello Task!\n");//打印Hello Task!
+        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+    }
+
+}
+void Task5(void* param) //传入空指针方便后期传入参数:
+{
+    while(1)
+    {
+        ESP_LOGI(TAG,"执行任务5");
+        servo_move(&servo5);
+        //printf("Hello Task!\n");//打印Hello Task!
+        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+    }
+
+}
+
+
 void app_main(void){
-
     
 
-    servo_spawn(&servo1, 39);
-    servo_spawn(&servo2, 40);
-    
-
+    servo_spawn(&servo1, 36, 0);
+    servo_spawn(&servo2, 37, 0);
+    servo_spawn(&servo3, 38, 1);
+    // servo_spawn(&servo4, 39, 1);
+    // servo_spawn(&servo5, 40, 1);
 
     ESP_LOGI(TAG,"FREERTOS 已启动！");
     xTaskCreate(Task1,"Task1",2048,NULL,1,NULL);//创建任务1
-    vTaskDelay(800/portTICK_PERIOD_MS);
+    vTaskDelay(200/portTICK_PERIOD_MS);
     xTaskCreate(Task2,"Task2",2048,NULL,1,NULL);//创建任务2
+    vTaskDelay(200/portTICK_PERIOD_MS);
+    xTaskCreate(Task3,"Task3",2048,NULL,1,NULL);//创建任务3
+    vTaskDelay(200/portTICK_PERIOD_MS);
+    // xTaskCreate(Task4,"Task4",2048,NULL,1,NULL);//创建任务4
+    // vTaskDelay(200/portTICK_PERIOD_MS);
+    // xTaskCreate(Task5,"Task5",2048,NULL,1,NULL);//创建任务5
     
 }
