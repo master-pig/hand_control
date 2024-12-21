@@ -1,53 +1,15 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 | Linux |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | -------- | -------- | -------- | ----- |
 
-# Hello World Example
+#### 1 rtc_brownout_isr_handler
+理解错误信息：0x40375613: rtc_brownout_isr_handler
+错误信息含义
+这个错误信息通常出现在ESP32开发过程中，它指示程序在运行时遇到了一个异常，并定位到了发生异常的具体位置。
 
-Starts a FreeRTOS task to print "Hello World".
+0x40375613: 这个十六进制数字是程序出错时指令指针（Program Counter，PC）所指向的内存地址。它可以帮助开发者定位到代码中的哪一行。
+rtc_brownout_isr_handler: 这是一个函数名，表示在ESP32的实时时钟控制器（RTC）检测到棕色故障（Brownout）时，会调用这个函数来处理中断。
+D:/Espressif/v5.3.1/esp-idf/components/esp_system/port/brownout.c:61: 这个路径和行号指出了发生异常的代码所在的文件和具体行数。
+总结来说，这个错误信息表示程序在执行RTC棕色故障中断服务程序时发生了异常，导致程序崩溃。
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+棕色故障（Brownout）是什么？
+棕色故障是指电源电压低于一个临界值，但又没有完全断电的一种状态。当ESP32检测到棕色故障时，为了保护系统，会触发中断，执行相应的处理函数。
 
-## How to use example
-
-Follow detailed instructions provided specifically for this example.
-
-Select the instructions depending on Espressif chip installed on your development board:
-
-- [ESP32 Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)
-- [ESP32-S2 Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html)
-
-
-## Example folder contents
-
-The project **hello_world** contains one source file in C language [hello_world_main.c](main/hello_world_main.c). The file is located in folder [main](main).
-
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt` files that provide set of directives and instructions describing the project's source files and targets (executable, library, or both).
-
-Below is short explanation of remaining files in the project folder.
-
-```
-├── CMakeLists.txt
-├── pytest_hello_world.py      Python script used for automated testing
-├── main
-│   ├── CMakeLists.txt
-│   └── hello_world_main.c
-└── README.md                  This is the file you are currently reading
-```
-
-For more information on structure and contents of ESP-IDF projects, please refer to Section [Build System](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/build-system.html) of the ESP-IDF Programming Guide.
-
-## Troubleshooting
-
-* Program upload failure
-
-    * Hardware connection is not correct: run `idf.py -p PORT monitor`, and reboot your board to see if there are any output logs.
-    * The baud rate for downloading is too high: lower your baud rate in the `menuconfig` menu, and try again.
-
-## Technical support and feedback
-
-Please use the following feedback channels:
-
-* For technical queries, go to the [esp32.com](https://esp32.com/) forum
-* For a feature request or bug report, create a [GitHub issue](https://github.com/espressif/esp-idf/issues)
-
-We will get back to you as soon as possible.
+#### 2 为什么group 0 不能用三个但是group 1 可以？
