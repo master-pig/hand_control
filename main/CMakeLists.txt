@@ -1,4 +1,4 @@
 idf_component_register(SRCS "servo_test.c" 
                     INCLUDE_DIRS ""
-                    REQUIRES "driver" "freertos" "servo")
+                    REQUIRES "driver" "freertos" "servo_demo")
 
