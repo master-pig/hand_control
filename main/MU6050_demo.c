@@ -78,18 +78,38 @@ void app_main(void)
 
     ret = mpu6050_get_deviceid(mpu6050, &mpu6050_deviceid);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(MPU6050_WHO_AM_I_VAL, mpu6050_deviceid, "Who Am I register does not contain expected data");
 
     ret = mpu6050_get_acce(mpu6050, &acce);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
+    ESP_LOGI(TAG, "acce_x:%.2f, acce_y:%.2f, acce_z:%.2f\n", acce.acce_x, acce.acce_y, acce.acce_z);
 
     ret = mpu6050_get_gyro(mpu6050, &gyro);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
+    ESP_LOGI(TAG, "gyro_x:%.2f, gyro_y:%.2f, gyro_z:%.2f\n", gyro.gyro_x, gyro.gyro_y, gyro.gyro_z);
+
+    ret = mpu6050_get_temp(mpu6050, &temp);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    ESP_LOGI(TAG, "t:%.2f \n", temp.temp);
 
     float now_pitch = 0;
     float before_pitch = 0;
 
     while (1)
     {
+        /* code */
+        ret = mpu6050_get_acce(mpu6050, &acce);
+        TEST_ASSERT_EQUAL(ESP_OK, ret);
+        ESP_LOGI(TAG, "acce_x:%.2f, acce_y:%.2f, acce_z:%.2f\n", acce.acce_x, acce.acce_y, acce.acce_z);
+
+        ret = mpu6050_get_gyro(mpu6050, &gyro);
+        TEST_ASSERT_EQUAL(ESP_OK, ret);
+        ESP_LOGI(TAG, "gyro_x:%.2f, gyro_y:%.2f, gyro_z:%.2f\n", gyro.gyro_x, gyro.gyro_y, gyro.gyro_z);
+
+        ret = mpu6050_get_temp(mpu6050, &temp);
+        TEST_ASSERT_EQUAL(ESP_OK, ret);
+        // ESP_LOGI(TAG, "t:%.2f \n", temp.temp);
+
         ret = mpu6050_complimentory_filter(mpu6050, &acce,&gyro,&angle);
         TEST_ASSERT_EQUAL(ESP_OK, ret);
         ESP_LOGI(TAG, "pitch:%.2f roll:%.2f \n", angle.pitch,angle.roll);
@@ -99,18 +119,7 @@ void app_main(void)
         now_pitch = angle.pitch;
 
         if ((now_pitch-before_pitch>=50) && (before_pitch != 0)){
-            servo_enable1 = 1;
-            servo_enable2 = 1;
-            servo_enable3 = 1;
-            servo_enable4 = 1;
-            servo_enable5 = 1;
-            }
-        if ((now_pitch-before_pitch<=-50) && (before_pitch != 0)){
-            servo_enable1 = -1;
-            servo_enable2 = -1;
-            servo_enable3 = -1;
-            servo_enable4 = -1;
-            servo_enable5 = -1;
+                servo_spawn(&servo1, 39);
         }
     }
     

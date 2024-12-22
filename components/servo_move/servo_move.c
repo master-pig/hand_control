@@ -8,7 +8,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "driver/mcpwm_prelude.h"
-
+#include "servo_move.h"
 
 static const char *TAG = "SERVO";
 
@@ -24,19 +24,18 @@ static const char *TAG = "SERVO";
 #define SERVO_TIMEBASE_RESOLUTION_HZ 1000000  // 1MHz, 1us per tick  时钟频率
 #define SERVO_TIMEBASE_PERIOD        20000    // 20000 ticks, 20ms   基准信号周期
 
-
-typedef struct {
-    mcpwm_timer_handle_t timer;
-    mcpwm_oper_handle_t oper;
-    mcpwm_cmpr_handle_t comparator;
-    mcpwm_gen_handle_t generator;
-    } mcpwm_instance_t;
-
 mcpwm_instance_t servo1;
 mcpwm_instance_t servo2;
 mcpwm_instance_t servo3;
 mcpwm_instance_t servo4;
 mcpwm_instance_t servo5;
+
+int servo_enable1 = 0;
+int servo_enable2 = 0;
+int servo_enable3 = 0;
+int servo_enable4 = 0;
+int servo_enable5 = 0;
+
 
 // 角度转成脉冲输出时间长度
 static inline uint32_t example_angle_to_compare(int angle)
@@ -91,22 +90,30 @@ void servo_spawn(mcpwm_instance_t *instance, int gpio, int group){
     ESP_ERROR_CHECK(mcpwm_timer_start_stop(instance->timer, MCPWM_TIMER_START_NO_STOP));
 
 }
-void servo_move(mcpwm_instance_t *instance){
-    vTaskDelay(pdMS_TO_TICKS(3000));
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(180)));
-    vTaskDelay(pdMS_TO_TICKS(3000));
-    ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(0)));
+void servo_move(mcpwm_instance_t *instance, int enable){
+    if (enable==1){
+        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(180)));
+        printf("up success");
+    }
+    else if (enable==-1){
+        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(instance->comparator, example_angle_to_compare(0)));
+        printf("down success");
+    }
+    // else if (enable==0){
+    //     print("enable=0");
+    // }
 
 }
+
 
 void Task1(void* param) //传入空指针方便后期传入参数:
 {
     while(1)
     {
         ESP_LOGI(TAG,"执行任务1");
-        servo_move(&servo1);
+        servo_move(&servo1, servo_enable1);
         //printf("Hello Task!\n");//打印Hello Task!
-        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+        vTaskDelay(100/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
     }
 
 }
@@ -116,9 +123,9 @@ void Task2(void* param) //传入空指针方便后期传入参数:
     while(1)
     {
         ESP_LOGI(TAG,"执行任务2");
-        servo_move(&servo2);
+        servo_move(&servo2, servo_enable2);
         //printf("Hello Task!\n");//打印Hello Task!
-        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+        vTaskDelay(100/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
     }
 
 }
@@ -128,9 +135,9 @@ void Task3(void* param) //传入空指针方便后期传入参数:
     while(1)
     {
         ESP_LOGI(TAG,"执行任务3");
-        servo_move(&servo3);
+        servo_move(&servo3, servo_enable3);
         //printf("Hello Task!\n");//打印Hello Task!
-        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+        vTaskDelay(100/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
     }
 
 }
@@ -139,9 +146,9 @@ void Task4(void* param) //传入空指针方便后期传入参数:
     while(1)
     {
         ESP_LOGI(TAG,"执行任务4");
-        servo_move(&servo4);
+        servo_move(&servo4, servo_enable4);
         //printf("Hello Task!\n");//打印Hello Task!
-        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+        vTaskDelay(100/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
     }
 
 }
@@ -150,32 +157,32 @@ void Task5(void* param) //传入空指针方便后期传入参数:
     while(1)
     {
         ESP_LOGI(TAG,"执行任务5");
-        servo_move(&servo5);
+        servo_move(&servo5, servo_enable5);
         //printf("Hello Task!\n");//打印Hello Task!
-        vTaskDelay(1000/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
+        vTaskDelay(100/portTICK_PERIOD_MS);//延时1000ms=1s,使系统执行其他任务
     }
 
 }
 
 
-void app_main(void){
+// void app_main(void){
     
 
-    servo_spawn(&servo1, 36, 0);
-    servo_spawn(&servo2, 37, 0);
-    servo_spawn(&servo3, 38, 1);
-    servo_spawn(&servo4, 39, 1);
-    servo_spawn(&servo5, 40, 1);
+//     servo_spawn(&servo1, 36, 0);
+//     servo_spawn(&servo2, 37, 0);
+//     servo_spawn(&servo3, 38, 1);
+//     servo_spawn(&servo4, 39, 1);
+//     servo_spawn(&servo5, 40, 1);
 
-    ESP_LOGI(TAG,"FREERTOS 已启动！");
-    xTaskCreate(Task1,"Task1",2048,NULL,1,NULL);//创建任务1
-    vTaskDelay(200/portTICK_PERIOD_MS);
-    xTaskCreate(Task2,"Task2",2048,NULL,1,NULL);//创建任务2
-    vTaskDelay(200/portTICK_PERIOD_MS);
-    xTaskCreate(Task3,"Task3",2048,NULL,1,NULL);//创建任务3
-    vTaskDelay(200/portTICK_PERIOD_MS);
-    xTaskCreate(Task4,"Task4",2048,NULL,1,NULL);//创建任务4
-    vTaskDelay(200/portTICK_PERIOD_MS);
-    xTaskCreate(Task5,"Task5",2048,NULL,1,NULL);//创建任务5
+//     ESP_LOGI(TAG,"FREERTOS 已启动！");
+//     xTaskCreate(Task1,"Task1",2048,NULL,1,NULL);//创建任务1
+//     vTaskDelay(200/portTICK_PERIOD_MS);
+//     xTaskCreate(Task2,"Task2",2048,NULL,1,NULL);//创建任务2
+//     vTaskDelay(200/portTICK_PERIOD_MS);
+//     xTaskCreate(Task3,"Task3",2048,NULL,1,NULL);//创建任务3
+//     vTaskDelay(200/portTICK_PERIOD_MS);
+//     xTaskCreate(Task4,"Task4",2048,NULL,1,NULL);//创建任务4
+//     vTaskDelay(200/portTICK_PERIOD_MS);
+//     xTaskCreate(Task5,"Task5",2048,NULL,1,NULL);//创建任务5
     
-}
+// }
