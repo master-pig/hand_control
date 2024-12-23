@@ -11,8 +11,8 @@
 #include "driver/i2c.h"
 #include "mpu6050.h"
 #include "esp_system.h"
+#include "MPU6050_main.h"
 
-#include "servo.h"
 
 #define I2C_MASTER_SCL_IO 19      /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO 20      /*!< gpio number for I2C master data  */
@@ -65,7 +65,7 @@ static void i2c_sensor_mpu6050_init(void)
     TEST_ASSERT_EQUAL(ESP_OK, ret);
 }
 
-void app_main(void)
+void Task_monitor(void* param)
 {
     esp_err_t ret;
     uint8_t mpu6050_deviceid;
@@ -93,7 +93,7 @@ void app_main(void)
         ret = mpu6050_complimentory_filter(mpu6050, &acce,&gyro,&angle);
         TEST_ASSERT_EQUAL(ESP_OK, ret);
         ESP_LOGI(TAG, "pitch:%.2f roll:%.2f \n", angle.pitch,angle.roll);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(200/portTICK_PERIOD_MS);//延时200ms=0.2s,使系统执行其他任务
 
         before_pitch = now_pitch;
         now_pitch = angle.pitch;
