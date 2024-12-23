@@ -8,11 +8,11 @@
 
 void app_main(void){
 
-    servo_enable1 = 1;
-    servo_enable2 = 1;
-    servo_enable3 = 1;
-    servo_enable4 = 1;
-    servo_enable5 = 1;
+    servo_enable1 = 0;
+    servo_enable2 = 0;
+    servo_enable3 = 0;
+    servo_enable4 = 0;
+    servo_enable5 = 0;
 
     servo_spawn(&servo1, 36, 0);
     servo_spawn(&servo2, 37, 0);
